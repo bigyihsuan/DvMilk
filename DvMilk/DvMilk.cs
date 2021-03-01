@@ -1,8 +1,5 @@
-﻿using System;
-using System.Linq;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 
 using UnityEngine;
 using UnityModManagerNet;
@@ -14,41 +11,122 @@ namespace DvMilk
 {
 	static class Main
 	{
-		static void Load(UnityModManager.ModEntry modEntry)
+		public const CargoType MILK = (CargoType)3000;
+		static bool Load(UnityModManager.ModEntry modEntry)
 		{
 			Debug.Log("[DvMilk] Loaded DvMilk");
+
+			if (AccessTools.Field(typeof(CargoTypes), "cargoTypeToSupportedCarContainer")?.GetValue(null)
+					is Dictionary<CargoType, List<CargoContainerType>> ct2ct)
+			{
+				ct2ct[MILK] = new List<CargoContainerType>() { CargoContainerType.TankerChem, CargoContainerType.TankerGas };
+			}
+			else
+			{
+				modEntry.Logger.Warning("Failed to add milk container types");
+			}
+
+			if (AccessTools.Field(typeof(CargoTypes), "cargoTypeToCargoMassPerUnit")?.GetValue(null)
+					is Dictionary<CargoType, float> ct2cmpu)
+			{
+				ct2cmpu[MILK] = 30_500f;
+			}
+			else
+			{
+				modEntry.Logger.Warning("Failed to add milk cargo mass");
+			}
+
+			if (AccessTools.Field(typeof(CargoTypes), "cargoSpecficDisplayName")?.GetValue(null)
+					is Dictionary<CargoType, string> cspdn)
+			{
+				cspdn[MILK] = "Milk";
+			}
+			else
+			{
+				modEntry.Logger.Warning("Failed to add milk long name");
+			}
+
+			if (AccessTools.Field(typeof(CargoTypes), "cargoShortDisplayName")?.GetValue(null)
+					is Dictionary<CargoType, string> cshdn)
+			{
+				cshdn[MILK] = "Milk";
+			}
+			else
+			{
+				modEntry.Logger.Warning("Failed to add milk short name");
+			}
+
+			if (AccessTools.Field(typeof(ResourceTypes), "cargoToFullCargoDamagePrice")?.GetValue(null)
+					is Dictionary<CargoType, float> cdpDict)
+			{
+				cdpDict[MILK] = 0f;
+			}
+			else
+			{
+				modEntry.Logger.Warning("Failed to add milk damage cost");
+			}
+
+			if (AccessTools.Field(typeof(ResourceTypes), "cargoToFullEnvironmentDamagePrice")?.GetValue(null)
+					is Dictionary<CargoType, float> cedpDict)
+			{
+				cedpDict[MILK] = 0f;
+			}
+			else
+			{
+				modEntry.Logger.Warning("Failed to add milk enviromental damage cost");
+			}
+
+			Debug.Log("[DvMilk] Patched methods");
+
 			var harmony = new Harmony(modEntry.Info.Id);
 			harmony.PatchAll(Assembly.GetExecutingAssembly());
-			Debug.Log("[DvMilk] Patched methods");
+			return true;
 		}
 	}
 
-	[HarmonyPatch(typeof(CargoTypes), "ContainerTypeToCarTypes", MethodType.Getter)]
-	class ContainerTypeToCarTypes_Getter_Patch
+	[HarmonyPatch(typeof(WarehouseMachine), MethodType.Constructor)]
+	static class WarehouseMachine_Constructor_Patch
 	{
-		// Before the method runs, add in Milk to the dictionary if it doesn't exist
-		static bool Postfix(ref Dictionary<CargoContainerType, List<TrainCarType>> __result)
+		static bool Prefix(Track WarehouseTrack, List<CargoType> SupportedCargoTypes)
 		{
-			Debug.Log("[DvMilk] ContainerTypeToCarTypes getter called");
-			if (!__result.TryGetValue((CargoContainerType)3000, out var value))
+			if (WarehouseTrack.ID.yardId == "FF" || WarehouseTrack.ID.yardId == "FM")
 			{
-				Debug.Log("[DvMilk] ContainerTypeToCarTypes getter: Milk not added");
-				var milkCars = new List<TrainCarType>() { TrainCarType.TankBlue, TrainCarType.TankOrange };
-				__result.Add((CargoContainerType)3000, milkCars);
-				Debug.Log("[DvMilk] ContainerTypeToCarTypes getter: Added Milk");
+				SupportedCargoTypes.Add(Main.MILK);
 			}
+			
 			return true;
 		}
 	}
 
-	[HarmonyPatch(typeof(CargoTypes), "GetCargoMass")]
-	class GetCargoMass_Patch
+	[HarmonyPatch(typeof(StationProceduralJobGenerator), MethodType.Constructor)]
+	static class StationProcedualJobGenerator_Constructor_Patch
 	{
-		
-		static bool Prefix(CargoType cargoType, float cargoAmount)
+		static bool Prefix(StationController stationController)
 		{
-			if (cargoAmount == 3000) { }
-			return true;
+			if (stationController.stationInfo.YardID == "FF")
+			{
+				foreach (CargoGroup cargoGroup in stationController.proceduralJobsRuleset.inputCargoGroups)
+				{
+					if (cargoGroup.cargoTypes.Contains(CargoType.Corn))
+					{
+						cargoGroup.cargoTypes.Add(Main.MILK);
+					}
+				}
+			}
+			else if (stationController.stationInfo.YardID == "FM")
+			{
+				foreach (CargoGroup cargoGroup in stationController.proceduralJobsRuleset.outputCargoGroups)
+				{
+					if (cargoGroup.cargoTypes.Contains(CargoType.Corn))
+					{
+						cargoGroup.cargoTypes.Add(Main.MILK);
+					}
+				}
+			}
+				return true;
 		}
 	}
+	
+
+	
 }
