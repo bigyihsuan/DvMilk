@@ -1,5 +1,6 @@
 {
   "Id": "DvMilk",
+  "DisplayName": "DvMilk",
   "Version": "0.0.0",
   "Author": "bigyihsuan",
   "EntryMethod": "DvMilk.Main.Load"

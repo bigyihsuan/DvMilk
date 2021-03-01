@@ -12,9 +12,9 @@ namespace DvMilk
 	static class Main
 	{
 		public const CargoType MILK = (CargoType)3000;
-		static bool Load(UnityModManager.ModEntry modEntry)
+		static void Load(UnityModManager.ModEntry modEntry)
 		{
-			Debug.Log("[DvMilk] Loaded DvMilk");
+			modEntry.Logger.Log("Loaded DvMilk");
 
 			if (AccessTools.Field(typeof(CargoTypes), "cargoTypeToSupportedCarContainer")?.GetValue(null)
 					is Dictionary<CargoType, List<CargoContainerType>> ct2ct)
@@ -36,10 +36,10 @@ namespace DvMilk
 				modEntry.Logger.Warning("Failed to add milk cargo mass");
 			}
 
-			if (AccessTools.Field(typeof(CargoTypes), "cargoSpecficDisplayName")?.GetValue(null)
+			if (AccessTools.Field(typeof(CargoTypes), "cargoSpecificDisplayName")?.GetValue(null)
 					is Dictionary<CargoType, string> cspdn)
 			{
-				cspdn[MILK] = "Milk";
+				cspdn.Add(MILK, "Milk");
 			}
 			else
 			{
@@ -56,44 +56,22 @@ namespace DvMilk
 				modEntry.Logger.Warning("Failed to add milk short name");
 			}
 
-			if (AccessTools.Field(typeof(ResourceTypes), "cargoToFullCargoDamagePrice")?.GetValue(null)
-					is Dictionary<CargoType, float> cdpDict)
-			{
-				cdpDict[MILK] = 0f;
-			}
-			else
-			{
-				modEntry.Logger.Warning("Failed to add milk damage cost");
-			}
-
-			if (AccessTools.Field(typeof(ResourceTypes), "cargoToFullEnvironmentDamagePrice")?.GetValue(null)
-					is Dictionary<CargoType, float> cedpDict)
-			{
-				cedpDict[MILK] = 0f;
-			}
-			else
-			{
-				modEntry.Logger.Warning("Failed to add milk enviromental damage cost");
-			}
-
-			Debug.Log("[DvMilk] Patched methods");
-
 			var harmony = new Harmony(modEntry.Info.Id);
 			harmony.PatchAll(Assembly.GetExecutingAssembly());
-			return true;
+
+			modEntry.Logger.Log("Patched methods");
 		}
 	}
 
 	[HarmonyPatch(typeof(WarehouseMachine), MethodType.Constructor)]
 	static class WarehouseMachine_Constructor_Patch
 	{
-		static bool Prefix(Track WarehouseTrack, List<CargoType> SupportedCargoTypes)
+		static bool Prefix(ref Track WarehouseTrack, ref List<CargoType> SupportedCargoTypes)
 		{
 			if (WarehouseTrack.ID.yardId == "FF" || WarehouseTrack.ID.yardId == "FM")
 			{
 				SupportedCargoTypes.Add(Main.MILK);
 			}
-			
 			return true;
 		}
 	}
@@ -101,7 +79,7 @@ namespace DvMilk
 	[HarmonyPatch(typeof(StationProceduralJobGenerator), MethodType.Constructor)]
 	static class StationProcedualJobGenerator_Constructor_Patch
 	{
-		static bool Prefix(StationController stationController)
+		static void Prefix(ref StationController stationController)
 		{
 			if (stationController.stationInfo.YardID == "FF")
 			{
@@ -123,10 +101,9 @@ namespace DvMilk
 					}
 				}
 			}
-				return true;
 		}
 	}
-	
 
-	
+
+
 }
