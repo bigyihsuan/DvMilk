@@ -9,7 +9,7 @@ using DV.Logic.Job;
 
 namespace DvMilk
 {
-	static class Main
+	class Main
 	{
 		public const CargoType MILK = (CargoType)3000;
 		static void Load(UnityModManager.ModEntry modEntry)
@@ -64,22 +64,24 @@ namespace DvMilk
 	}
 
 	[HarmonyPatch(typeof(WarehouseMachine), MethodType.Constructor)]
+	[HarmonyPatch(new System.Type[] { typeof(Track), typeof(List<CargoType>) })]
 	static class WarehouseMachine_Constructor_Patch
 	{
-		static bool Prefix(ref Track WarehouseTrack, ref List<CargoType> SupportedCargoTypes)
+		static void Postfix(ref Track WarehouseTrack, ref List<CargoType> SupportedCargoTypes)
 		{
 			if (WarehouseTrack.ID.yardId == "FF" || WarehouseTrack.ID.yardId == "FM")
 			{
 				SupportedCargoTypes.Add(Main.MILK);
+				
 			}
-			return true;
 		}
 	}
 
 	[HarmonyPatch(typeof(StationProceduralJobGenerator), MethodType.Constructor)]
+	[HarmonyPatch(new System.Type[] { typeof(StationController) })]
 	static class StationProcedualJobGenerator_Constructor_Patch
 	{
-		static void Prefix(ref StationController stationController)
+		static void Postfix(ref StationController stationController)
 		{
 			if (stationController.stationInfo.YardID == "FF")
 			{
@@ -88,6 +90,7 @@ namespace DvMilk
 					if (cargoGroup.cargoTypes.Contains(CargoType.Corn))
 					{
 						cargoGroup.cargoTypes.Add(Main.MILK);
+						break;
 					}
 				}
 			}
@@ -98,6 +101,7 @@ namespace DvMilk
 					if (cargoGroup.cargoTypes.Contains(CargoType.Corn))
 					{
 						cargoGroup.cargoTypes.Add(Main.MILK);
+						break;
 					}
 				}
 			}
