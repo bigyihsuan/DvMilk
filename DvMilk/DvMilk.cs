@@ -1,5 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Reflection;
+using System.Text;
 
 using UnityEngine;
 using UnityModManagerNet;
@@ -56,6 +58,26 @@ namespace DvMilk
 				modEntry.Logger.Warning("Failed to add milk short name");
 			}
 
+			if (AccessTools.Field(typeof(ResourceTypes), "cargoToFullCargoDamagePrice")?.GetValue(null)
+					is Dictionary<CargoType, float> c2fcdp)
+			{
+				c2fcdp[MILK] = 0f;
+			}
+			else
+			{
+				modEntry.Logger.Warning("Failed to add milk full cargo damage price");
+			}
+
+			if (AccessTools.Field(typeof(ResourceTypes), "cargoToFullEnvironmentDamagePrice")?.GetValue(null)
+					is Dictionary<CargoType, float> c2fedp)
+			{
+				c2fedp[MILK] = 16000f;
+			}
+			else
+			{
+				modEntry.Logger.Warning("Failed to add milk full cargo enviromental damage price");
+			}
+
 			var harmony = new Harmony(modEntry.Info.Id);
 			harmony.PatchAll(Assembly.GetExecutingAssembly());
 
@@ -64,7 +86,7 @@ namespace DvMilk
 	}
 
 	[HarmonyPatch(typeof(WarehouseMachine), MethodType.Constructor)]
-	[HarmonyPatch(new System.Type[] { typeof(Track), typeof(List<CargoType>) })]
+	[HarmonyPatch(new Type[] { typeof(Track), typeof(List<CargoType>) })]
 	static class WarehouseMachine_Constructor_Patch
 	{
 		static void Postfix(ref Track WarehouseTrack, ref List<CargoType> SupportedCargoTypes)
@@ -77,8 +99,36 @@ namespace DvMilk
 		}
 	}
 
+	[HarmonyPatch(typeof(WarehouseMachineController), "Start")]
+	[HarmonyPriority(Priority.Low)]
+	class WarhouseMachineController_Start_Patch
+	{
+		static void Postfix(WarehouseMachineController __instance, ref string ___supportedCargoTypesText)
+		{
+			string yardID = __instance.warehouseMachine.WarehouseTrack.ID.yardId;
+			Console.WriteLine("[DvMilk] " + yardID);
+			if (yardID == "FM" || yardID == "FF")
+			{
+				if (!__instance.supportedCargoTypes.Contains(Main.MILK))
+				{
+					__instance.supportedCargoTypes.Add(Main.MILK);
+				}
+				Console.WriteLine("[DvMilk] patching supported cargo types text");
+				StringBuilder stringBuilder = new StringBuilder();
+				for (int i = 0; i < __instance.supportedCargoTypes.Count; i++)
+				{
+					stringBuilder.AppendLine(__instance.supportedCargoTypes[i].GetCargoName());
+				}
+				stringBuilder.AppendLine("Milk");
+				___supportedCargoTypesText = stringBuilder.ToString();
+				Console.WriteLine("[DvMilk] appended Milk to warehouse machine");
+				
+			}
+		}
+	}
+
 	[HarmonyPatch(typeof(StationProceduralJobGenerator), MethodType.Constructor)]
-	[HarmonyPatch(new System.Type[] { typeof(StationController) })]
+	[HarmonyPatch(new Type[] { typeof(StationController) })]
 	static class StationProcedualJobGenerator_Constructor_Patch
 	{
 		static void Postfix(ref StationController stationController)
