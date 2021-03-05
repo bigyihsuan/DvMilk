@@ -1,3 +1,8 @@
+# DvMilk
+A mod that adds in a Milk cargo to Derail Valley.
+
+Milk is generated at Farm and is delivered in tank cars to Food Factory, no hazmat licenses needed. This means you can start hauling tankers from the get-go rather than waiting until you buy Logicstical Haul or Hazmat 1.
+
 ```
 Station IDs: FF, FM
 	Food Factory, Farm
